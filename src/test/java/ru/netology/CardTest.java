@@ -1,261 +1,193 @@
 package ru.netology;
 
+import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.Configuration;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebElement;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.Duration;
 
 import static com.codeborne.selenide.Condition.*;
-import static com.codeborne.selenide.Selectors.*;
 import static com.codeborne.selenide.Selenide.*;
 
 class CardTest {
-    Date date = new Date();
 
-    void setLocalHost(){
+    @BeforeEach
+    void setUp() {
         Configuration.holdBrowserOpen=true;
         open("http://localhost:9999");
+        $("[data-test-id='date'] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.BACK_SPACE);
     }
+
+    public String generateDate(int days) {
+        return LocalDate.now().plusDays(days).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    }
+    String planningDate;
 
     // положительная проверка
     @Test
-    void CardAlfaTesting_1(){
-        setLocalHost();
+    void shouldTestWithCorrectFields(){
 
-        $("[placeholder='Город']").setValue("Ульяновск");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
+        planningDate = generateDate(5);
+        $("[data-test-id='city'] input").setValue("Ульяновск");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Иванов Петр");
         $("[data-test-id='phone'] input").setValue("+79278243700");
         $("[data-test-id='agreement']").click();
-
         $$("button").find(exactText("Забронировать")).click();
-        $(withText("Успешно!")).shouldBe(visible, Duration.ofSeconds(15));
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
 
-        String textOfSuccess = $(withText("Успешно!")).getText();
-        assertEquals(textOfSuccess, "Успешно!");
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
     }
 
-    // дата выставлена вручную
+    // дата выставлена вручную и есть дефисы d названии города и фамилии
     @Test
-    void CardAlfaTesting_2(){
-        setLocalHost();
+    void shouldTestWithManualDateAndHyphenInName(){
 
-        $("[placeholder='Город']").setValue("Санкт-Петербург");
-
-        WebElement changeInput = $("[placeholder='Дата встречи']");
-        changeInput.sendKeys(Keys.CONTROL + "A");
-        changeInput.sendKeys(Keys.BACK_SPACE);
-
-        Date tomorrow = new Date(date.getTime() + (1000 * 60 * 60 * 96));
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(tomorrow));
-
+        planningDate = generateDate(10);
+        $("[data-test-id='city'] input").setValue("Санкт-Петербург");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Петр Иванов-Никитин");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
 
-        $(withText("Успешно!")).shouldBe(visible, Duration.ofSeconds(15));
-        String textOfSuccess = $(withText("Успешно!")).getText();
-        assertEquals(textOfSuccess, "Успешно!");
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
     }
 
     // дата на 3 недели вперед
     @Test
-    void CardAlfaTesting_3(){
-        setLocalHost();
+    void shouldTestWithDateAfterThreeWeeks(){
 
-        $("[placeholder='Город']").setValue("Казань");
-        WebElement changeInput = $("[placeholder='Дата встречи']");
-        changeInput.sendKeys(Keys.CONTROL + "A");
-        changeInput.sendKeys(Keys.BACK_SPACE);
-
-        final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-        Date date = new Date();
-        int noOfDays = 21; //i.e three weeks
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        calendar.add(Calendar.DAY_OF_YEAR, noOfDays);
-
-        $("[placeholder='Дата встречи']").setValue(dateFormat.format(calendar.getTime()));
-
+        planningDate = generateDate(21);
+        $("[data-test-id='city'] input").setValue("Казань");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Марина Васильева");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
 
-        $(withText("Успешно!")).shouldBe(visible, Duration.ofSeconds(15));
-        String textOfSuccess = $(".notification__title").getText();
-        assertEquals(textOfSuccess, "Успешно!");
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
     }
 
     //город на латинице
     @Test
-    void CardAlfaTesting_4(){
-        setLocalHost();
+    void shouldTestWithWrongCity(){
 
-        $("[placeholder='Город']").setValue("Eaf");
-
-        WebElement changeInput = $("[placeholder='Дата встречи']");
-        changeInput.sendKeys(Keys.CONTROL + "A");
-        changeInput.sendKeys(Keys.BACK_SPACE);
-
-        Date tomorrow = new Date(date.getTime() + (1000 * 60 * 60 * 96));
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(tomorrow));
-
+        planningDate = generateDate(6);
+        $("[data-test-id='city'] input").setValue("Eaf");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Петр Иванов-Никитин");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Доставка в выбранный город недоступна");
+        $("[data-test-id='city'].input_invalid .input__sub").shouldHave(text("Доставка в выбранный город недоступна"));
     }
 
     //неверная дата
     @Test
-    void CardAlfaTesting_5(){
-        setLocalHost();
+    void shouldTestWithWrongDate(){
 
-        $("[placeholder='Город']").setValue("Москва");
-
-        WebElement changeInput = $("[placeholder='Дата встречи']");
-        changeInput.sendKeys(Keys.CONTROL + "A");
-        changeInput.sendKeys(Keys.BACK_SPACE);
-
-        final DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-        Date date = new Date();
-        int noOfDays = -14; // 2 weeks
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        calendar.add(Calendar.DAY_OF_YEAR, noOfDays);
-
-        $("[placeholder='Дата встречи']").setValue(dateFormat.format(calendar.getTime()));
-
+        planningDate = generateDate(-5);
+        $("[data-test-id='city'] input").setValue("Москва");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Петр Иванов");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Заказ на выбранную дату невозможен");
+        $("[data-test-id='date'] .input_invalid .input__sub").shouldHave(text("Заказ на выбранную дату невозможен"));
     }
 
     // имя на латинице
     @Test
-    void CardAlfaTesting_6(){
-        setLocalHost();
+    void shouldTestWithWrongName(){
 
-        $("[placeholder='Город']").setValue("Москва");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
-
+        planningDate = generateDate(7);
+        $("[data-test-id='city'] input").setValue("Москва");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("ivanov");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Имя и Фамилия указаные неверно. Допустимы только русские буквы, пробелы и дефисы.");
+        $("[data-test-id='name'].input_invalid .input__sub")
+                .shouldHave(text("Имя и Фамилия указаные неверно. Допустимы только русские буквы, пробелы и дефисы."));
     }
 
     // неверный телефон
     @Test
-    void CardAlfaTesting_7(){
-        setLocalHost();
+    void shouldTestWithWrongPhone(){
 
-        $("[placeholder='Город']").setValue("Москва");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
-
+        planningDate = generateDate(20);
+        $("[data-test-id='city'] input").setValue("Москва");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Иванов иван");
-        $("[data-test-id='phone'] input").setValue("879278243600");
+        $("[data-test-id='phone'] input").setValue("879278243");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Телефон указан неверно. Должно быть 11 цифр, например, +79012345678.");
+        $("[data-test-id='phone'].input_invalid .input__sub").shouldHave(text("Телефон указан неверно. Должно быть 11 цифр, например, +79012345678."));
     }
 
-    // не стоит галочка на согласии
+    // нет согласия
     @Test
-    void CardAlfaTesting_8(){
-        setLocalHost();
+    void shouldTestWithoutAgreement(){
 
-        $("[placeholder='Город']").setValue("Москва");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
-
+        planningDate = generateDate(9);
+        $("[data-test-id='city'] input").setValue("Москва");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Иванов иван");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $$("button").find(exactText("Забронировать")).click();
-
-        String getClassesOfAgreement = $("[data-test-id='agreement']").getAttribute("class");
-        assertEquals(getClassesOfAgreement, "checkbox checkbox_size_m checkbox_theme_alfa-on-white input_invalid" );
+        $("[data-test-id='agreement']").shouldHave(cssClass("input_invalid"));
     }
 
-    // пустое поле города
+    // нет города
     @Test
-    void CardAlfaTesting_9(){
-        setLocalHost();
+    void shouldTestWithoutCity(){
 
-        $("[placeholder='Город']").setValue("");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
-
+        planningDate = generateDate(9);
+        $("[data-test-id='city'] input").setValue("");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("Иванов иван");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Поле обязательно для заполнения");
+        $("[data-test-id='city'].input_invalid .input__sub").shouldHave(text("Поле обязательно для заполнения"));
     }
 
     // нет даты
     @Test
-    void CardAlfaTesting_10(){
-        setLocalHost();
+    void shouldTestWithoutDate(){
 
-        $("[placeholder='Город']").setValue("Новосибирск");
-        WebElement changeInput = $("[placeholder='Дата встречи']");
-        changeInput.sendKeys(Keys.CONTROL + "A");
-        changeInput.sendKeys(Keys.BACK_SPACE);
-
+        $("[data-test-id='city'] input").setValue("Новосибирск");
         $("[data-test-id='name'] input").setValue("Иванов иван");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Неверно введена дата");
+        $("[data-test-id='date'] .input_invalid .input__sub").shouldHave(text("Неверно введена дата"));
     }
 
-    // пустое поле имени
+    // нет имени
     @Test
-    void CardAlfaTesting_11(){
-        setLocalHost();
+    void shouldTestWithoutName(){
 
-        $("[placeholder='Город']").setValue("Псков");
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
-        $("[placeholder='Дата встречи']").setValue(formatter.format(date));
-
+        planningDate = generateDate(12);
+        $("[data-test-id='city'] input").setValue("Псков");
+        $("[data-test-id='date'] input").setValue(planningDate);
         $("[data-test-id='name'] input").setValue("");
         $("[data-test-id='phone'] input").setValue("+79278243600");
         $("[data-test-id='agreement']").click();
         $$("button").find(exactText("Забронировать")).click();
-
-        String textOfFail = $(".input_invalid .input__sub").getText();
-        assertEquals(textOfFail, "Поле обязательно для заполнения");
+        $("[data-test-id='name'].input_invalid .input__sub").shouldHave(text("Поле обязательно для заполнения"));;
     }
 }
