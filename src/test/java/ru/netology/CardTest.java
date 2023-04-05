@@ -2,8 +2,10 @@ package ru.netology;
 
 import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.Configuration;
+import com.codeborne.selenide.SelenideElement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.Duration;
 
 import static com.codeborne.selenide.Condition.*;
+import static com.codeborne.selenide.Selectors.withText;
 import static com.codeborne.selenide.Selenide.*;
 
 class CardTest {
@@ -25,12 +28,16 @@ class CardTest {
     public String generateDate(int days) {
         return LocalDate.now().plusDays(days).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
     }
+
+    public String generatePlusDays(int days){
+        return LocalDate.now().plusDays(days).format(DateTimeFormatter.ofPattern("dd"));
+    }
     String planningDate;
+    int ourDate;
 
     // положительная проверка
     @Test
     void shouldTestWithCorrectFields(){
-
         planningDate = generateDate(5);
         $("[data-test-id='city'] input").setValue("Ульяновск");
         $("[data-test-id='date'] input").setValue(planningDate);
@@ -45,7 +52,74 @@ class CardTest {
         $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
     }
 
-    // дата выставлена вручную и есть дефисы d названии города и фамилии
+    @Test
+    void shouldChooseByTwoLetters(){
+        planningDate = generateDate(5);
+        SelenideElement nameOfCity =  $("[data-test-id='city'] input");
+        nameOfCity.click();
+        nameOfCity.setValue("ул");
+        SelenideElement needCity = $$(".menu-item__control").findBy(text("Улан-Удэ"))
+                .shouldBe(visible, Duration.ofSeconds(5));
+        needCity.click();
+        $("[data-test-id='date'] input").setValue(planningDate);
+        $("[data-test-id='name'] input").setValue("Петр Иванов-Никитин");
+        $("[data-test-id='phone'] input").setValue("+79278243600");
+        $("[data-test-id='agreement']").click();
+        $$("button").find(exactText("Забронировать")).click();
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
+
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
+    }
+
+    @Test
+    void shouldChooseByTwoLetters_2(){
+        planningDate = generateDate(5);
+        SelenideElement nameOfCity =  $("[data-test-id='city'] input");
+        nameOfCity.click();
+        nameOfCity.setValue("мо");
+        SelenideElement needCity = $$(".menu-item__control").findBy(text("Смоленск"))
+                .shouldBe(visible, Duration.ofSeconds(5));
+        needCity.click();
+        $("[data-test-id='date'] input").setValue(planningDate);
+        $("[data-test-id='name'] input").setValue("Петр Иванов-Никитин");
+        $("[data-test-id='phone'] input").setValue("+79278243600");
+        $("[data-test-id='agreement']").click();
+        $$("button").find(exactText("Забронировать")).click();
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
+
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
+    }
+
+    //выбор даты на +5 дней через клик по виджету календаря
+    @Test
+    void shouldChooseDateByWidget(){
+        planningDate = generateDate(5);
+        $("[data-test-id='city'] input").setValue("Санкт-Петербург");
+        $("[data-test-id='date'] .icon-button__content").click();
+
+        SelenideElement widget = $(".calendar__layout .calendar__day_state_today");
+        int num = Integer.parseInt(widget.getText());
+        generatePlusDays(num);
+        ourDate = Integer.parseInt(generatePlusDays(5));
+        SelenideElement chosenDay = $$(".calendar__day").findBy(text("10"));
+        chosenDay.click();
+        $("[data-test-id='name'] input").setValue("Петр Иванов-Никитин");
+        $("[data-test-id='phone'] input").setValue("+79278243600");
+        $("[data-test-id='agreement']").click();
+        $$("button").find(exactText("Забронировать")).click();
+        $(".notification__content")
+                .shouldHave(Condition.text("Встреча успешно забронирована на " + planningDate), Duration.ofSeconds(15))
+                .shouldBe(Condition.visible);
+
+        $("[data-test-id='notification'] .notification__title").shouldHave(text("Успешно!"));
+    }
+
+
+    // дата выставлена вручную и есть дефисы в названии города и фамилии
     @Test
     void shouldTestWithManualDateAndHyphenInName(){
 
@@ -66,7 +140,6 @@ class CardTest {
     // дата на 3 недели вперед
     @Test
     void shouldTestWithDateAfterThreeWeeks(){
-
         planningDate = generateDate(21);
         $("[data-test-id='city'] input").setValue("Казань");
         $("[data-test-id='date'] input").setValue(planningDate);
@@ -154,7 +227,6 @@ class CardTest {
     // нет города
     @Test
     void shouldTestWithoutCity(){
-
         planningDate = generateDate(9);
         $("[data-test-id='city'] input").setValue("");
         $("[data-test-id='date'] input").setValue(planningDate);
@@ -168,7 +240,6 @@ class CardTest {
     // нет даты
     @Test
     void shouldTestWithoutDate(){
-
         $("[data-test-id='city'] input").setValue("Новосибирск");
         $("[data-test-id='name'] input").setValue("Иванов иван");
         $("[data-test-id='phone'] input").setValue("+79278243600");
